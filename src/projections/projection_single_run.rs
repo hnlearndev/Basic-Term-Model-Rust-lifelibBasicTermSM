@@ -1,3 +1,4 @@
+use crate::assumptions::assumption_scenario::AssumptionScenario;
 use crate::model_points::{ModelPoint, convert_model_points_df_to_vector};
 use crate::projections::projection_mp::*;
 use polars::prelude::*;

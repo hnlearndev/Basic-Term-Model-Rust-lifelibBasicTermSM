@@ -1,0 +1,72 @@
+# Exclude results folders
+/src/results/
+/src/result/
+/results
+
+# Rust build output
+/target/
+**/*.rs.bk
+
+# Cargo package files
+Cargo.lock
+
+# By default, Cargo.lock is ignored for libraries, but included for binaries.
+# Uncomment the next line if this is a library crate:
+# Cargo.lock
+
+# IDE/editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Backup files
+*~
+*.bak
+
+# Misc
+node_modules/
+
+
+# Below is for notebooks folder
+# Ignore Python cache and compiled files everywhere
+__pycache__/
+*.pyc
+*.pyo
+
+# Ignore virtual environments at root or in notebooks/
+.venv/
+venv/
+env/
+notebooks/.venv/
+notebooks/venv/
+notebooks/env/
+notebooks/uv/
+
+# Ignore marimo and Jupyter checkpoints in notebooks/
+notebooks/.ipynb_checkpoints/
+notebooks/.marimo_checkpoints/
+
+# Ignore data/output folders and files in notebooks/
+notebooks/result/
+notebooks/results/
+notebooks/output/
+notebooks/outputs/
+notebooks/*.parquet
+notebooks/*.csv
+notebooks/archived
+notebooks/__marimo__
+
+# Ruff cache
+.notebooks/.ruff_cache/
+.ruff_cache/
