@@ -4,8 +4,8 @@
 
 # Rust build output
 /target/
+**/target/
 **/*.rs.bk
-
 # Cargo package files
 Cargo.lock
 
@@ -18,6 +18,9 @@ Cargo.lock
 .vscode/
 *.swp
 *.swo
+
+# Jujutsu VCS files
+.jj/
 
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/
