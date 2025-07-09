@@ -1,7 +1,6 @@
 # Exclude results folders
-/src/results/
-/src/result/
-/results
+/src/result*/
+/result*/
 
 # Rust build output
 /target/
@@ -58,15 +57,12 @@ notebooks/.ipynb_checkpoints/
 notebooks/.marimo_checkpoints/
 
 # Ignore data/output folders and files in notebooks/
-notebooks/result/
-notebooks/results/
-notebooks/output/
-notebooks/outputs/
+notebooks/result*/
+notebooks/output*/
 notebooks/*.parquet
 notebooks/*.csv
 notebooks/archived
 notebooks/__marimo__
 
 # Ruff cache
-.notebooks/.ruff_cache/
-.ruff_cache/
+notebooks/.ruff_cache/
