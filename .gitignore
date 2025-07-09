@@ -3,9 +3,9 @@
 /result*/
 
 # Rust build output
-/target/
 **/target/
 **/*.rs.bk
+
 # Cargo package files
 Cargo.lock
 

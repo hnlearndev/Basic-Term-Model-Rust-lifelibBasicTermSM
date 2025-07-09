@@ -173,7 +173,7 @@ impl SingleRunResult {
 // Process data in chunks to avoid stack overflow
 const CHUNK_SIZE: usize = 100;
 
-pub fn _project_single_run(setup: &SingleRunSetup) -> PolarsResult<SingleRunResult> {
+fn _project_single_run(setup: &SingleRunSetup) -> PolarsResult<SingleRunResult> {
     // Convert model points DataFrame to vector
     let model_points_vec = convert_model_points_df_to_vector(&setup.model_points_df)?;
 
