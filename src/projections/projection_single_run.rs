@@ -188,7 +188,7 @@ fn _project_single_run(setup: &SingleRunSetup) -> PolarsResult<SingleRunResult> 
             // Process each chunk sequentially (no nested parallelism)
             let all_lfs = chunk
                 .iter()
-                .map(|mp| s_model::project_single_model_point(mp, &setup.assumption_scenario)) // TODO: handle errors properly
+                .map(|mp| s::project_single_model_point(mp, &setup.assumption_scenario)) // TODO: handle errors properly
                 .collect::<PolarsResult<Vec<LazyFrame>>>()?;
 
             // Concatenate LazyFrames within the chunk and collect to DataFrame

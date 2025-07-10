@@ -1,6 +1,9 @@
 use crate::assumptions::assumption_scenario::AssumptionScenario;
-use polars::prelude::*; // Add this line or adjust the path as needed
+use chrono::NaiveDate;
+use ndarray::Array1;
+use polars::prelude::*;
 
-pub mod asl_se_model;
-pub mod s_model;
-pub mod se_model;
+pub mod asl_se;
+pub mod structs;
+pub mod s;
+pub mod se;

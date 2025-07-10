@@ -1,4 +1,5 @@
 use super::*;
+use crate::projections::projection_mp::structs::SModelPoint;
 
 //---------------------------------------------------------------------------------------------------------
 // PRIVATE
@@ -23,7 +24,7 @@ fn _initialize_lf(id: i32, term: i32, entry_age: i32, sum_insured: f64) -> Polar
     .with_column((lit(entry_age) + col("duration")).alias("age"))
     .select([all().exclude(["t_i32"])]); // Drop t_i32 column
 
-    Ok(lf.collect()?.lazy()) // To avoid nested lazyframe
+    Ok(lf)
 }
 
 // ---------------------
@@ -55,11 +56,11 @@ fn __map_mort_assumption(
         .select([col("age"), col(mort_col_name).alias("mort_rate")]);
 
     // Left join with the mortality rate - similar to vlookup in Excel
-    let result = lf
+    let lf = lf
         .left_join(mort_lf, col("age"), col("age"))
         .with_column(col("mort_rate").fill_null(lit(0.0)).alias("mort_rate"));
 
-    Ok(result.collect()?.lazy()) // To avoid nested lazyframe
+    Ok(lf)
 }
 
 // Map lapse, Inflation, Expenses and Spot rate assumption
@@ -72,11 +73,11 @@ fn __map_other_assumption(lf: LazyFrame, lookup_df: &DataFrame) -> PolarsResult<
         .with_column((col("year") - lit(1)).alias("duration")) // Adjust year to duration
         .select([col("duration"), col(col_name)]); // Drop "year" column
 
-    let result = lf
+    let lf = lf
         .left_join(lookup_lf, col("duration"), col("duration"))
         .with_column(col(col_name).fill_null(lit(0.0)).alias(col_name)); // Fill null with 0.0
 
-    Ok(result.collect()?.lazy()) // To avoid nested lazyframe
+    Ok(lf)
 }
 
 fn _map_assumptions(
@@ -95,14 +96,14 @@ fn _map_assumptions(
     let lf = __map_other_assumption(lf, &assumptions.spot)?;
     let lf = __map_other_assumption(lf, &assumptions.load)?;
 
-    Ok(lf.collect()?.lazy())
+    Ok(lf)
 }
 
 // ---------------------
 // Discount factor
 // ---------------------
 fn _discount_factor(lf: LazyFrame) -> PolarsResult<LazyFrame> {
-    let result = lf
+    let lf = lf
         .with_column(
             // Spot rate monthly
             ((lit(1.0) + col("spot_rate")).pow(1.0 / 12.0) - lit(1.0)).alias("spot_rate_mth"),
@@ -112,7 +113,7 @@ fn _discount_factor(lf: LazyFrame) -> PolarsResult<LazyFrame> {
             (lit(1.0) / (lit(1.0) + col("spot_rate_mth")).pow(col("t"))).alias("discount_factor"),
         );
 
-    Ok(result.collect()?.lazy())
+    Ok(lf)
 }
 
 // ---------------------
@@ -126,7 +127,7 @@ fn _inflation_factor(lf: LazyFrame) -> PolarsResult<LazyFrame> {
             .alias("inf_factor"),
     );
 
-    Ok(lf.collect()?.lazy())
+    Ok(lf)
 }
 
 // Expense per policy
@@ -145,7 +146,7 @@ fn _exp_pp(lf: LazyFrame) -> PolarsResult<LazyFrame> {
             (col("real_exp_pp") * col("inf_factor")).alias("exp_pp"),
         );
 
-    Ok(lf.collect()?.lazy()) // To avoid nested lazyframe
+    Ok(lf)
 }
 
 // ---------------------
@@ -203,7 +204,7 @@ fn _policies_movement(lf: LazyFrame, policy_count: f64, term: i32) -> PolarsResu
     ]?;
 
     // Horizontally concatenate the new columns to the existing LazyFrame
-    let result = df
+    let lf = df
         .hstack(&[
             new_df.column("pols_if")?.clone(),
             new_df.column("pols_maturity")?.clone(),
@@ -212,7 +213,7 @@ fn _policies_movement(lf: LazyFrame, policy_count: f64, term: i32) -> PolarsResu
         ])?
         .lazy();
 
-    Ok(result.collect()?.lazy()) // To avoid nested lazyframe
+    Ok(lf)
 }
 
 // ---------------------
@@ -220,7 +221,7 @@ fn _policies_movement(lf: LazyFrame, policy_count: f64, term: i32) -> PolarsResu
 // ---------------------
 fn __calculate_net_premium(lf: LazyFrame) -> PolarsResult<f64> {
     // Calculate both PV claims and premium annuities in a single operation
-    let result = lf
+    let lf = lf
         .with_column(
             // Portfolio claims
             (col("claim_pp") * col("pols_death")).alias("claims"),
@@ -237,13 +238,13 @@ fn __calculate_net_premium(lf: LazyFrame) -> PolarsResult<f64> {
         .collect()?;
 
     // Extract both values in one operation
-    let pv_claims = result
+    let pv_claims = lf
         .column("pv_claims")?
         .get(0)?
         .extract::<f64>()
         .unwrap_or(0.0);
 
-    let prem_annuities = result
+    let prem_annuities = lf
         .column("prem_annuities")?
         .get(0)?
         .extract::<f64>()
@@ -290,16 +291,13 @@ fn _complete_projection(lf: LazyFrame) -> PolarsResult<LazyFrame> {
                 .alias("net_cf"),
         );
 
-    Ok(lf.collect()?.lazy()) // To avoid nested lazyframe
+    Ok(lf)
 }
 
 //---------------------------------------------------------------------------------------------------------
 // PUBLIC
 //---------------------------------------------------------------------------------------------------------
-pub fn project_single_model_point(
-    mp: &ModelPoint,
-    assumptions: &AssumptionScenario,
-) -> PolarsResult<LazyFrame> {
+pub fn project_s_mp(mp: SModelPoint, assumptions: &AssumptionScenario) -> PolarsResult<LazyFrame> {
     // Initialize projection dataframe - using all interger values
     let lf = _initialize_lf(mp.id, mp.term, mp.entry_age, mp.sum_insured)?;
 
@@ -312,5 +310,5 @@ pub fn project_single_model_point(
     let lf = _policies_movement(lf, mp.policy_count, mp.term)?;
     let lf = _complete_projection(lf)?;
 
-    Ok(lf.collect()?.lazy()) // To avoid nested lazyframe
+    Ok(lf)
 }

@@ -1,3 +1,4 @@
+use chrono::NaiveDate;
 use ndarray::prelude::*;
 use ndarray_rand::RandomExt;
 use ndarray_rand::rand::SeedableRng;
@@ -5,62 +6,16 @@ use ndarray_rand::rand::rngs::StdRng;
 use ndarray_rand::rand_distr::Uniform;
 use polars::prelude::*;
 
-//---------------------------------------------------------------------------------------------------------
-// STRUCTS
-//---------------------------------------------------------------------------------------------------------
-pub struct ModelPoint {
-    pub model: String,
-    pub id: i32,
-    pub entry_age: i32,
-    pub gender: String,
-    pub term: i32,
-    pub policy_count: f64,
-    pub sum_insured: f64,
-    pub duration_mth: Option<i32>,  // For SE model
-    pub issue_date: Option<String>, // For ASL_SE model
-    pub payment_freq: Option<i32>,  // For ASL_SE model - 1, 4, 6, 12
-    pub payment_term: Option<i32>,  // For ASL_SE model
-}
+pub mod asl_se_mp_gen;
+pub mod pricing_mp_gen;
+pub mod s_mp_gen;
+pub mod se_mp_gen;
+
+
 
 //---------------------------------------------------------------------------------------------------------
 // PUBLIC
 //---------------------------------------------------------------------------------------------------------
-pub fn generate_s_model_points(mp_size: usize, seed: usize) -> PolarsResult<DataFrame> {
-    // Get seed for random number generation
-    let mut rng = StdRng::seed_from_u64(seed as u64);
-
-    // Issue Age (Integer): Random 20 - 59 year old
-    let entry_age = Array1::random_using(mp_size, Uniform::new(20, 60), &mut rng); // 60 is exclusive, so range is 20-59
-
-    // Gender (String): Random "M" and "F"
-    let gender_binary = Array1::random_using(mp_size, Uniform::new(0, 2), &mut rng); // 0 or 1
-    let gender: Vec<&str> = gender_binary
-        .iter()
-        .map(|&x| if x == 0 { "M" } else { "F" }) // map 0 to "M" and 1 to "F"
-        .collect();
-
-    // Policy term (Integer): Random 10, 15 or 20
-    let term = (Array1::random_using(mp_size, Uniform::new(2, 5), &mut rng)) * 5;
-
-    // Policy count
-    let policy_count = Array1::<f64>::ones(mp_size);
-
-    // Sum insured (Float): Random values between 100,000 and 1,000,000 (multiple of 1000)
-    let sum_insured = Array1::random_using(mp_size, Uniform::new(0.0f64, 1.0f64), &mut rng) // Random floats between 0 and 1
-        .mapv(|x| (((900_000.0 * x + 100_000.0) / 1000.0).round() * 1000.0));
-
-    // Create a DataFrame with the generated data
-    let model_points_df = df![
-        "id"  => (1..(mp_size+1) as i32).collect::<Vec<i32>>(),
-        "entry_age" => entry_age.to_vec(),
-        "gender" => gender,
-        "term" => term.to_vec(),
-        "policy_count" => policy_count.to_vec().into_iter().collect::<Vec<f64>>(),
-        "sum_insured" => sum_insured.to_vec(),
-    ]?;
-
-    Ok(model_points_df)
-}
 
 pub fn convert_model_points_df_to_vector(df: &DataFrame) -> PolarsResult<Vec<ModelPoint>> {
     let id = df.column("id")?.i32()?;
