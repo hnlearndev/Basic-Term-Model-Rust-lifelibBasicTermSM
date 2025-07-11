@@ -1,6 +1,5 @@
 use crate::assumptions::assumption_scenario::AssumptionScenario;
-use crate::model_points::{ModelPoint, convert_model_points_df_to_vector};
-use crate::projections::projection_mp::*;
+use crate::projections::projection_mp::ModelPoint;
 use polars::prelude::*;
 use rayon::prelude::*;
 use std::fs::{File, read_to_string, write};
@@ -175,7 +174,7 @@ const CHUNK_SIZE: usize = 100;
 
 fn _project_single_run(setup: &SingleRunSetup) -> PolarsResult<SingleRunResult> {
     // Convert model points DataFrame to vector
-    let model_points_vec = convert_model_points_df_to_vector(&setup.model_points_df)?;
+    let model_points_vec = __convert_model_points_df_to_vector(&setup.model_points_df)?;
 
     // Process chunks of model points in parallel with limited threads
     let chunks = model_points_vec
@@ -188,13 +187,13 @@ fn _project_single_run(setup: &SingleRunSetup) -> PolarsResult<SingleRunResult> 
             // Process each chunk sequentially (no nested parallelism)
             let all_lfs = chunk
                 .iter()
-                .map(|mp| s::project_single_model_point(mp, &setup.assumption_scenario)) // TODO: handle errors properly
+                .map(|mp| mp.project(&setup.assumption_scenario))
                 .collect::<PolarsResult<Vec<LazyFrame>>>()?;
 
             // Concatenate LazyFrames within the chunk and collect to DataFrame
             let lf = concat(all_lfs, Default::default())?;
 
-            Ok(lf.collect()?.lazy()) // To avoid nested lazyframe
+            Ok(lf)
         })
         .collect::<PolarsResult<Vec<LazyFrame>>>()?;
 
@@ -209,4 +208,29 @@ fn _project_single_run(setup: &SingleRunSetup) -> PolarsResult<SingleRunResult> 
     };
 
     Ok(result)
+}
+
+fn __convert_model_points_df_to_vector(df: &DataFrame) -> PolarsResult<Vec<ModelPoint>> {
+    todo!("Implement conversion from DataFrame to Vec<ModelPoint>");
+    // let id = df.column("id")?.i32()?;
+    // let entry_age = df.column("entry_age")?.i32()?;
+    // let gender = df.column("gender")?.str()?;
+    // let term = df.column("term")?.i32()?;
+    // let policy_count = df.column("policy_count")?.f64()?;
+    // let sum_insured = df.column("sum_insured")?.f64()?;
+    // let model = df.column("model")?.str()?;
+
+    // let model_points = (0..df.height())
+    //     .map(|i| ModelPoint {
+    //         id: id.get(i).unwrap(),
+    //         entry_age: entry_age.get(i).unwrap(),
+    //         gender: gender.get(i).unwrap().to_string(),
+    //         term: term.get(i).unwrap(),
+    //         policy_count: policy_count.get(i).unwrap(),
+    //         sum_insured: sum_insured.get(i).unwrap(),
+    //         model: model.get(i).unwrap().to_string(),
+    //     })
+    //     .collect();
+
+    // Ok(model_points)
 }

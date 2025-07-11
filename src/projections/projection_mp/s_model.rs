@@ -1,12 +1,40 @@
 use super::*;
-use crate::projections::projection_mp::structs::SModelPoint;
+
+//---------------------------------------------------------------------------------------------------------
+// STRUCTS
+//---------------------------------------------------------------------------------------------------------
+pub struct SModelPoint {
+    pub model: String,
+    pub id: i32,
+    pub entry_age: i32,
+    pub gender: String,
+    pub term: i32,
+    pub policy_count: f64,
+    pub sum_insured: f64,
+}
+
+impl SModelPoint {
+    pub fn project(&self, assumptions: &AssumptionScenario) -> PolarsResult<LazyFrame> {
+        // Initialize projection dataframe - using all interger values
+        let lf = _initialize_lf(self.id, self.term, self.entry_age, self.sum_insured)?;
+
+        // Map assumptions
+        let lf = _map_assumptions(lf, assumptions, &self.gender)?;
+
+        // Perform projection
+        let lf = _discount_factor(lf)?;
+        let lf = _exp_pp(lf)?;
+        let lf = _policies_movement(lf, self.policy_count, self.term)?;
+        let lf = _complete_projection(lf)?;
+
+        Ok(lf)
+    }
+}
 
 //---------------------------------------------------------------------------------------------------------
 // PRIVATE
 //---------------------------------------------------------------------------------------------------------
-// ---------------------
-// Intialize LazyFrame
-// ---------------------
+// ------------------Intialize LazyFrame------------------
 fn _initialize_lf(id: i32, term: i32, entry_age: i32, sum_insured: f64) -> PolarsResult<LazyFrame> {
     let length = (term * 12 + 1) as usize; // Total months in the term
 
@@ -27,9 +55,7 @@ fn _initialize_lf(id: i32, term: i32, entry_age: i32, sum_insured: f64) -> Polar
     Ok(lf)
 }
 
-// ---------------------
-// Map assumptions
-// ---------------------
+// ------------------Map assumptions------------------
 // Map mortality assumption
 fn __map_mort_assumption(
     lf: LazyFrame,
@@ -99,9 +125,7 @@ fn _map_assumptions(
     Ok(lf)
 }
 
-// ---------------------
-// Discount factor
-// ---------------------
+// ------------------Discount factor------------------
 fn _discount_factor(lf: LazyFrame) -> PolarsResult<LazyFrame> {
     let lf = lf
         .with_column(
@@ -116,9 +140,7 @@ fn _discount_factor(lf: LazyFrame) -> PolarsResult<LazyFrame> {
     Ok(lf)
 }
 
-// ---------------------
-// Inflation factor
-// ---------------------
+// ------------------Inflation factor------------------
 fn _inflation_factor(lf: LazyFrame) -> PolarsResult<LazyFrame> {
     let lf = lf.with_column(
         // Inflation factor - for flat curve only
@@ -130,7 +152,7 @@ fn _inflation_factor(lf: LazyFrame) -> PolarsResult<LazyFrame> {
     Ok(lf)
 }
 
-// Expense per policy
+// ------------------Expense per policy------------------
 fn _exp_pp(lf: LazyFrame) -> PolarsResult<LazyFrame> {
     let lf = lf
         .with_columns(vec![
@@ -149,9 +171,7 @@ fn _exp_pp(lf: LazyFrame) -> PolarsResult<LazyFrame> {
     Ok(lf)
 }
 
-// ---------------------
-// Policy movement
-// ---------------------
+// ------------------Policy movement------------------
 fn _policies_movement(lf: LazyFrame, policy_count: f64, term: i32) -> PolarsResult<LazyFrame> {
     let lf = lf.with_columns(vec![
         // Monthly decrement rate
@@ -216,9 +236,7 @@ fn _policies_movement(lf: LazyFrame, policy_count: f64, term: i32) -> PolarsResu
     Ok(lf)
 }
 
-// ---------------------
-// Complete projection
-// ---------------------
+// ------------------Complete projection------------------
 fn __calculate_net_premium(lf: LazyFrame) -> PolarsResult<f64> {
     // Calculate both PV claims and premium annuities in a single operation
     let lf = lf
@@ -260,7 +278,7 @@ fn __calculate_net_premium(lf: LazyFrame) -> PolarsResult<f64> {
     Ok(net_premium)
 }
 
-// Complete projection
+// ------------------Complete projection------------------
 fn _complete_projection(lf: LazyFrame) -> PolarsResult<LazyFrame> {
     // Calculate net premium
     let net_prem = __calculate_net_premium(lf.clone())?;
@@ -290,25 +308,6 @@ fn _complete_projection(lf: LazyFrame) -> PolarsResult<LazyFrame> {
             (col("premiums") - col("expenses") - col("claims") - col("commissions"))
                 .alias("net_cf"),
         );
-
-    Ok(lf)
-}
-
-//---------------------------------------------------------------------------------------------------------
-// PUBLIC
-//---------------------------------------------------------------------------------------------------------
-pub fn project_s_mp(mp: SModelPoint, assumptions: &AssumptionScenario) -> PolarsResult<LazyFrame> {
-    // Initialize projection dataframe - using all interger values
-    let lf = _initialize_lf(mp.id, mp.term, mp.entry_age, mp.sum_insured)?;
-
-    // Map assumptions
-    let lf = _map_assumptions(lf, assumptions, &mp.gender)?;
-
-    // Perform projection
-    let lf = _discount_factor(lf)?;
-    let lf = _exp_pp(lf)?;
-    let lf = _policies_movement(lf, mp.policy_count, mp.term)?;
-    let lf = _complete_projection(lf)?;
 
     Ok(lf)
 }

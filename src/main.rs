@@ -1,9 +1,9 @@
 mod assumptions;
-mod model_points;
+mod mp_gen;
 mod projections;
 
 use crate::assumptions::assumption_scenario::AssumptionScenario;
-use crate::model_points::generate_model_points;
+use crate::mp_gen::pricing_mp_gen::generate_s_model_points; // Removed because function does not exist
 use crate::projections::projection_multi_runs::RunsSetup;
 use crate::projections::projection_single_run::SingleRunSetup;
 
@@ -14,7 +14,7 @@ use std::time::Instant;
 // PRIVATE
 //---------------------------------------------------------------------------------------------------------
 fn get_run_setups() -> PolarsResult<RunsSetup> {
-    let model_points_df = generate_model_points(10_000, 987654321)?;
+    let model_points_df = generate_s_model_points()?;
 
     let run_setup_01 = SingleRunSetup {
         description: "Run setup 01 - Used for pricing".to_string(),
